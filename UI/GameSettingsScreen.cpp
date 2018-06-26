@@ -51,6 +51,7 @@
 #include "Core/Config.h"
 #include "Core/ConfigValues.h"
 #include "Core/Host.h"
+#include "Core/SaveState.h"
 #include "Core/System.h"
 #include "Core/Reporting.h"
 #include "Core/WebServer.h"
@@ -734,8 +735,20 @@ void GameSettingsScreen::CreateViews() {
 
 	systemSettings->Add(new Choice(sy->T("Restore Default Settings")))->OnClick.Handle(this, &GameSettingsScreen::OnRestoreDefaultSettings);
 	systemSettings->Add(new CheckBox(&g_Config.bEnableStateUndo, sy->T("Savestate slot backups")));
+// original commit
 	static const char *autoLoadSaveStateChoices[] = { "Off", "Oldest Save", "Newest Save", "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5" };
 	systemSettings->Add(new PopupMultiChoice(&g_Config.iAutoLoadSaveState, sy->T("Auto Load Savestate"), autoLoadSaveStateChoices, 0, ARRAY_SIZE(autoLoadSaveStateChoices), sy->GetName(), screenManager()));
+
+	//create vector of strings
+	std::vector<std::string> newautoLoadSaveStateChoices = { "Off", "Oldest Save", "Newest Save" };
+	for ( int slot = 1; slot <= SaveState::NUM_SLOTS; slot++) {
+		newautoLoadSaveStateChoices.push_back("Slot " + std::to_string(slot)); // Slot1, Slot2 etc
+	}
+	systemSettings->Add(new PopupMultiChoiceDynamic(&g_Config.sAutoLoadSaveState, sy->T("Auto Load Savestate"), newautoLoadSaveStateChoices, nullptr, screenManager()));
+
+//example of dynamic
+//graphicsSettings->Add(new PopupMultiChoiceDynamic(deviceNameSetting, gr->T("Device"), draw->GetDeviceList(), nullptr, screenManager()));
+
 #if defined(USING_WIN_UI)
 	systemSettings->Add(new CheckBox(&g_Config.bBypassOSKWithKeyboard, sy->T("Enable Windows native keyboard", "Enable Windows native keyboard")));
 #endif

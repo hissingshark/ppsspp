@@ -176,6 +176,7 @@ public:
 	int iRewindFlipFrequency;
 	bool bEnableStateUndo;
 	int iAutoLoadSaveState; // 0 = off, 1 = oldest, 2 = newest, >2 = slot number + 3
+	std::string sAutoLoadSaveState; // Off, Oldest, Newest, Slot1, Slot2...etc to max of SaveState::NUM_SLOTS
 	bool bEnableCheats;
 	bool bReloadCheats;
 	int iCwCheatRefreshRate;

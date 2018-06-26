@@ -1340,6 +1340,7 @@ void EmuScreen::autoLoad() {
 	int autoSlot = -1;
 
 	//check if save state has save, if so, load
+/*
 	switch (g_Config.iAutoLoadSaveState) {
 	case (int)AutoLoadSaveState::OFF: // "AutoLoad Off"
 		return;
@@ -1351,6 +1352,22 @@ void EmuScreen::autoLoad() {
 		break;
 	default: // try the specific save state slot specified
 		autoSlot = (SaveState::HasSaveInSlot(gamePath_, g_Config.iAutoLoadSaveState - 3)) ? (g_Config.iAutoLoadSaveState - 3) : -1;
+		break;
+	}
+*/
+	switch (g_Config.sAutoLoadSaveState) {
+	case "Off":
+		return;
+	case "Oldest Save":
+		autoSlot = SaveState::GetOldestSlot(gamePath_);
+		break;
+	case "Newest Save":
+		autoSlot = SaveState::GetNewestSlot(gamePath_);
+		break;
+	default: // try the specific save state slot specified
+//		autoSlot = (SaveState::HasSaveInSlot(gamePath_, g_Config.iAutoLoadSaveState - 3)) ? (g_Config.iAutoLoadSaveState - 3) : -1;
+		autoSlot = atoi(g_Config.sAutoLoadSaveState.substr(5)) -1; // digits after "Slot "
+		autoSlot = (SaveState::HasSaveInSlot(gamePath_, autoSlot)) ? autoSlot : -1;
 		break;
 	}
 
