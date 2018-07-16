@@ -56,6 +56,15 @@
 #include "GPU/Common/FramebufferCommon.h"
 #include "GPU/Common/PostShader.h"
 
+#include "ui/screen.h"
+#include "ui/ui_screen.h"
+
+int testloop = 0;
+int skipMA = 0;
+int skipLast = 0;
+int lastShift = 0;
+int numStrikes = 0;
+
 struct FrameBufferState {
 	u32 topaddr;
 	GEBufferFormat fmt;
@@ -548,6 +557,33 @@ static void DoFrameTiming(bool &throttle, bool &skipFrame, float timestep) {
 	if (g_Config.bLogFrameDrops) {
 		DoFrameDropLogging(scaledTimestep);
 	}
+//
+// hissingshark
+//
+	if (g_Config.bAutoReduceInternalResolution) {
+		if (g_Config.iInternalResolution == 2 && curFrameTime > nextFrameTime) {
+            g_Config.iInternalResolution = 1;
+            NativeMessageReceived("gpu_resized", "");
+            NativeMessageReceived("gpu_clearCache", "");
+            gpu->Resized();
+            gpu->Reinitialize();
+//            ILOG("\nDowngraded res...\n");
+		}
+//		else if (g_Config.iInternalResolution == 1 && nextFrameTime - curFrameTime > scaledTimestep) {
+		else if (g_Config.iInternalResolution == 1 && curFrameTime < nextFrameTime) {
+            g_Config.iInternalResolution = 2;
+            NativeMessageReceived("gpu_resized", "");
+            NativeMessageReceived("gpu_clearCache", "");
+            gpu->Resized();
+    	    gpu->Reinitialize();
+//            ILOG("\nUpgraded res...\n");
+        }
+	}
+/*
+*/
+//
+// hissingshark
+//
 
 	// Auto-frameskip automatically if speed limit is set differently than the default.
 	bool useAutoFrameskip = g_Config.bAutoFrameSkip && g_Config.iRenderingMode != FB_NON_BUFFERED_MODE;
@@ -565,6 +601,15 @@ static void DoFrameTiming(bool &throttle, bool &skipFrame, float timestep) {
 		else
 			skipFrame = true;
 	}
+
+    if (!skipFrame) {
+        // recalculate moving average
+        if (numSkippedFrames) {
+            skipMA = ((skipMA + numSkippedFrames) / 2);
+            skipLast = numSkippedFrames;
+        }
+    }
+
 
 	if (curFrameTime < nextFrameTime && throttle) {
 		// If time gap is huge just jump (somebody unthrottled)

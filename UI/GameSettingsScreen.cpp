@@ -313,6 +313,11 @@ void GameSettingsScreen::CreateViews() {
 
 	graphicsSettings->Add(new ItemHeader(gr->T("Performance")));
 #ifndef MOBILE_DEVICE
+	CheckBox *autoRes = graphicsSettings->Add(new CheckBox(&g_Config.bAutoReduceInternalResolution, gr->T("Auto Reduce Rendering Resolution")));
+	autoRes->OnClick.Add([=](EventParams &e) {
+		settingInfo_->Show(gr->T("AutoReduceInternalResolution Tip", "Reduces resolution to maintain framerate - DO NOT USE WITH FRAMESKIPPING"), e.v);
+		return UI::EVENT_CONTINUE;
+	});
 	static const char *internalResolutions[] = {"Auto (1:1)", "1x PSP", "2x PSP", "3x PSP", "4x PSP", "5x PSP", "6x PSP", "7x PSP", "8x PSP", "9x PSP", "10x PSP" };
 #else
 	static const char *internalResolutions[] = {"Auto (1:1)", "1x PSP", "2x PSP", "3x PSP", "4x PSP", "5x PSP" };

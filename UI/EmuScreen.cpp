@@ -86,6 +86,9 @@
 static AVIDump avi;
 #endif
 
+extern int skipMA;
+extern int skipLast;
+
 static bool frameStep_;
 static int lastNumFlips;
 static bool startDumping;
@@ -1131,7 +1134,8 @@ static void DrawFPS(DrawBuffer *draw2d, const Bounds &bounds) {
 	case 2:
 		snprintf(fpsbuf, sizeof(fpsbuf), "FPS: %0.1f", actual_fps); break;
 	case 3:
-		snprintf(fpsbuf, sizeof(fpsbuf), "%0.0f/%0.0f (%0.1f%%)", actual_fps, fps, vps / (59.94f / 100.0f)); break;
+//		snprintf(fpsbuf, sizeof(fpsbuf), "%0.0f/%0.0f (%0.1f%%)", actual_fps, fps, vps / (59.94f / 100.0f)); break;
+		snprintf(fpsbuf, sizeof(fpsbuf), "%d(%d)", skipLast, skipMA); break;
 	default:
 		return;
 	}
