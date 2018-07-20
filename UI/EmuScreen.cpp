@@ -1135,7 +1135,7 @@ static void DrawFPS(DrawBuffer *draw2d, const Bounds &bounds) {
 		snprintf(fpsbuf, sizeof(fpsbuf), "FPS: %0.1f", actual_fps); break;
 	case 3:
 //		snprintf(fpsbuf, sizeof(fpsbuf), "%0.0f/%0.0f (%0.1f%%)", actual_fps, fps, vps / (59.94f / 100.0f)); break;
-		snprintf(fpsbuf, sizeof(fpsbuf), "%d(%d)", skipLast, skipMA); break;
+		snprintf(fpsbuf, sizeof(fpsbuf), "%d(%0.1f)", skipLast, skipMA); break;
 	default:
 		return;
 	}
