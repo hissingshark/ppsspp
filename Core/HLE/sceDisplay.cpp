@@ -60,7 +60,7 @@
 #include "ui/ui_screen.h"
 
 int testloop = 0;
-int skipMA = 0;
+float skipMA = 0.0;
 int skipLast = 0;
 int lastShift = 0;
 int numStrikes = 0;
@@ -560,8 +560,11 @@ static void DoFrameTiming(bool &throttle, bool &skipFrame, float timestep) {
 //
 // hissingshark
 //
+	testloop++;
+	
 	if (g_Config.bAutoReduceInternalResolution) {
-		if (g_Config.iInternalResolution == 2 && curFrameTime > nextFrameTime) {
+//		if (g_Config.iInternalResolution == 2 && curFrameTime > nextFrameTime) {
+		if (testloop == 100) {
             g_Config.iInternalResolution = 1;
             NativeMessageReceived("gpu_resized", "");
             NativeMessageReceived("gpu_clearCache", "");
@@ -570,7 +573,9 @@ static void DoFrameTiming(bool &throttle, bool &skipFrame, float timestep) {
 //            ILOG("\nDowngraded res...\n");
 		}
 //		else if (g_Config.iInternalResolution == 1 && nextFrameTime - curFrameTime > scaledTimestep) {
-		else if (g_Config.iInternalResolution == 1 && curFrameTime < nextFrameTime) {
+//		else if (g_Config.iInternalResolution == 1 && curFrameTime < nextFrameTime) {
+		if (testloop == 200) {
+		testloop = 0;
             g_Config.iInternalResolution = 2;
             NativeMessageReceived("gpu_resized", "");
             NativeMessageReceived("gpu_clearCache", "");
@@ -601,16 +606,7 @@ static void DoFrameTiming(bool &throttle, bool &skipFrame, float timestep) {
 		else
 			skipFrame = true;
 	}
-
-    if (!skipFrame) {
-        // recalculate moving average
-        if (numSkippedFrames) {
-            skipMA = ((skipMA + numSkippedFrames) / 2);
-            skipLast = numSkippedFrames;
-        }
-    }
-
-
+	
 	if (curFrameTime < nextFrameTime && throttle) {
 		// If time gap is huge just jump (somebody unthrottled)
 		if (nextFrameTime - curFrameTime > 2*scaledTimestep) {
@@ -790,6 +786,13 @@ void __DisplayFlip(int cyclesLate) {
 			gstate_c.skipDrawReason |= SKIPDRAW_SKIPFRAME;
 			numSkippedFrames++;
 		} else {
+// hissingshark
+        // recalculate moving average
+			if (numSkippedFrames > 0) {
+            skipMA = ((skipMA + numSkippedFrames) / 2);
+            skipLast = numSkippedFrames;
+			}
+// hissingshark			
 			gstate_c.skipDrawReason &= ~SKIPDRAW_SKIPFRAME;
 			numSkippedFrames = 0;
 		}
