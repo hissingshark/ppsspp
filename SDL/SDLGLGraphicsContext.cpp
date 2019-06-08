@@ -86,6 +86,43 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 		return nullptr;
 	}
 
+	// prepare for making a table of the EGL heuristics scores
+	enum {
+		CONFIGNUM,
+		COLORSCORE,
+		ALPHASCORE,
+		DEPTHSCORE,
+		STENCILSCORE,
+		LEVELSCORE,
+		SAMPLESSCORE,
+		SAMPLEBUFFERSCORE,
+		TRANSPARENTSCORE,
+		CAVEATSCORE,
+		SURFACESCORE,
+		RENDERABLESCOREGLES,
+		RENDERABLESCOREGL,
+		TOTALSCORE,
+		SCORETYPESSIZE
+	};
+	std::vector<std::vector<int> > scoresTable(numConfigs, std::vector<int>(SCORETYPESSIZE));
+	std::string scoresTableHeadings[SCORETYPESSIZE] = {
+		"Config:",
+		"Colour:",
+		"Alpha:",
+		"Depth:",
+		"Stencl:",
+		"Level:",
+		"Sample:",
+		"Buffer:",
+		"Trans:",
+		"Caveat:",
+		"Surf:",
+		"GLES:",
+		"GL:",
+		"TOTAL:"
+	};
+	int scoresTableColumn = 0;
+
 	configs.resize(numConfigs);
 	result = eglGetConfigs(g_eglDisplay, &configs[0], numConfigs, &numConfigs);
 	if (result != EGL_TRUE || numConfigs == 0) {
@@ -100,6 +137,7 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 	EGLConfig best = nullptr;
 	int bestScore = 0;
 	int bestContextVersion = 0;
+	int bestConfigNum = 0;
 	for (const EGLConfig &config : configs) {
 		auto readConfig = [&](EGLint attr) -> EGLint {
 			EGLint val = 0;
@@ -112,21 +150,34 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 			EGLint val = readConfig(attr);
 			return val > m ? 1 : val;  // why not 0?
 		};
+		scoresTable[scoresTableColumn][CONFIGNUM] = scoresTableColumn+1;
 		int colorScore = readConfigMax(EGL_RED_SIZE, 8) + readConfigMax(EGL_BLUE_SIZE, 8) + readConfigMax(EGL_GREEN_SIZE, 8);
+		scoresTable[scoresTableColumn][COLORSCORE] = colorScore;
 		int alphaScore = readConfigMax(EGL_ALPHA_SIZE, 8);
 		int depthScore = readConfig(EGL_DEPTH_SIZE);
+		scoresTable[scoresTableColumn][DEPTHSCORE] = depthScore;
 		int levelScore = readConfig(EGL_LEVEL) == 0 ? 100 : 0;
+		scoresTable[scoresTableColumn][LEVELSCORE] = levelScore;
 		int samplesScore = readConfig(EGL_SAMPLES) == 0 ? 100 : 0;
+		scoresTable[scoresTableColumn][SAMPLESSCORE] = samplesScore;
 		int sampleBufferScore = readConfig(EGL_SAMPLE_BUFFERS) == 0 ? 100 : 0;
+		scoresTable[scoresTableColumn][SAMPLEBUFFERSCORE] = sampleBufferScore;
 		int stencilScore = readConfig(EGL_STENCIL_SIZE);
+		scoresTable[scoresTableColumn][STENCILSCORE] = stencilScore;
 		int transparentScore = readConfig(EGL_TRANSPARENT_TYPE) == EGL_NONE ? 50 : 0;
+		scoresTable[scoresTableColumn][TRANSPARENTSCORE] = transparentScore;
 
 		EGLint caveat = readConfig(EGL_CONFIG_CAVEAT);
 		int caveatScore = caveat == EGL_NONE ? 100 : (caveat == EGL_NON_CONFORMANT_CONFIG ? 50 : 0);
+		//int caveatScore = caveat == EGL_NONE ? 100 : (caveat == EGL_NON_CONFORMANT_CONFIG ? 99 : 0);
+		scoresTable[scoresTableColumn][CAVEATSCORE] = caveatScore;
 
 #ifndef USING_FBDEV
 		EGLint surfaceType = readConfig(EGL_SURFACE_TYPE);
 		int surfaceScore = (surfaceType & EGL_WINDOW_BIT) ? 100 : 0;
+		scoresTable[scoresTableColumn][SURFACESCORE] = surfaceScore;
+#else
+		scoresTable[scoresTableColumn][SURFACESCORE] = 0;
 #endif
 
 		EGLint renderable = readConfig(EGL_RENDERABLE_TYPE);
@@ -140,10 +191,13 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 		int renderableScoreGLES = 0;
 		int renderableScoreGL = renderableGL ? 100 : (renderableGLES3 ? 80 : 0);
 #endif
+		scoresTable[scoresTableColumn][RENDERABLESCOREGLES] = renderableScoreGLES;
+		scoresTable[scoresTableColumn][RENDERABLESCOREGL] = renderableScoreGL;
 
 		if (avoidAlphaGLES && renderableScoreGLES > 0) {
 			alphaScore = 8 - alphaScore;
 		}
+		scoresTable[scoresTableColumn][ALPHASCORE] = alphaScore;
 
 		int score = 0;
 		// Here's a good place to play with the weights to pick a better config.
@@ -156,12 +210,27 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 		score += surfaceScore;
 #endif
 
+		scoresTable[scoresTableColumn][TOTALSCORE] = score;
+
 		if (score > bestScore) {
 			bestScore = score;
 			best = config;
 			bestContextVersion = renderableGLES3 ? 3 : (renderableGLES2 ? 2 : 0);
+			bestConfigNum = scoresTableColumn+1;
 		}
+
+		scoresTableColumn++;
 	}
+
+	printf("\nEGL Config Scores:\n");
+	for (int scoresTableRow = 0; scoresTableRow < SCORETYPESSIZE; scoresTableRow++) {
+		printf("%s\t", scoresTableHeadings[scoresTableRow].c_str());
+		for (int scoresTableColumn = 0; scoresTableColumn < numConfigs; scoresTableColumn++) {
+			printf("%d\t", scoresTable[scoresTableColumn][scoresTableRow]);
+		}
+		printf("\n");
+	}
+	printf("\nHeuristics chose config #%d\n\n", bestConfigNum);
 
 	*contextVersion = bestContextVersion;
 	return best;
