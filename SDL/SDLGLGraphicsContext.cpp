@@ -141,6 +141,8 @@ static int8_t EGL_Open(SDL_Window *window) {
 EGLConfig EGL_FindConfig(int *contextVersion) {
 	std::vector<EGLConfig> configs;
 	EGLint numConfigs = 0;
+	EGLScore eglScore;
+	std::vector<EGLScore> eglScoreTable;
 
 	EGLBoolean result = eglGetConfigs(g_eglDisplay, nullptr, 0, &numConfigs);
 	if (result != EGL_TRUE || numConfigs == 0) {
@@ -174,24 +176,24 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 			EGLint val = readConfig(attr);
 			return val > m ? def : val;
 		};
-
-		int colorScore = readConfigMax(EGL_RED_SIZE, 8) + readConfigMax(EGL_BLUE_SIZE, 8) + readConfigMax(EGL_GREEN_SIZE, 8);
-		int alphaScore = readConfigMax(EGL_ALPHA_SIZE, 8);
-		int depthScore = readConfig(EGL_DEPTH_SIZE);
-		int levelScore = readConfig(EGL_LEVEL) == 0 ? 100 : 0;
-		int samplesScore = readConfig(EGL_SAMPLES) == 0 ? 100 : 0;
-		int sampleBufferScore = readConfig(EGL_SAMPLE_BUFFERS) == 0 ? 100 : 0;
-		int stencilScore = readConfig(EGL_STENCIL_SIZE);
-		int transparentScore = readConfig(EGL_TRANSPARENT_TYPE) == EGL_NONE ? 50 : 0;
+		eglScore = {};
+		eglScore.color = readConfigMax(EGL_RED_SIZE, 8) + readConfigMax(EGL_BLUE_SIZE, 8) + readConfigMax(EGL_GREEN_SIZE, 8);
+		eglScore.alpha = readConfigMax(EGL_ALPHA_SIZE, 8);
+		eglScore.depth = readConfig(EGL_DEPTH_SIZE);
+		eglScore.level = readConfig(EGL_LEVEL) == 0 ? 100 : 0;
+		eglScore.samples = readConfig(EGL_SAMPLES) == 0 ? 100 : 0;
+		eglScore.sampleBuffer = readConfig(EGL_SAMPLE_BUFFERS) == 0 ? 100 : 0;
+		eglScore.stencil = readConfig(EGL_STENCIL_SIZE);
+		eglScore.transparent = readConfig(EGL_TRANSPARENT_TYPE) == EGL_NONE ? 50 : 0;
 
 		EGLint caveat = readConfig(EGL_CONFIG_CAVEAT);
 		// Let's assume that non-conformant configs aren't so awful.
-		int caveatScore = caveat == EGL_NONE ? 100 : (caveat == EGL_NON_CONFORMANT_CONFIG ? 95 : 0);
+		eglScore.caveat = caveat == EGL_NONE ? 100 : (caveat == EGL_NON_CONFORMANT_CONFIG ? 95 : 0);
 
 #ifndef USING_FBDEV
 		EGLint surfaceType = readConfig(EGL_SURFACE_TYPE);
 		// Only try a non-Window config in the worst case when there are only non-Window configs.
-		int surfaceScore = (surfaceType & EGL_WINDOW_BIT) ? 1000 : 0;
+		eglScore.surface = (surfaceType & EGL_WINDOW_BIT) ? 1000 : 0;
 #endif
 
 		EGLint renderable = readConfig(EGL_RENDERABLE_TYPE);
@@ -199,26 +201,26 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 		bool renderableGLES2 = (renderable & EGL_OPENGL_ES2_BIT) != 0;
 		bool renderableGL = (renderable & EGL_OPENGL_BIT) != 0;
 #ifdef USING_GLES2
-		int renderableScoreGLES = renderableGLES3 ? 100 : (renderableGLES2 ? 80 : 0);
-		int renderableScoreGL = 0;
+		eglScore.renderableGLES = renderableGLES3 ? 100 : (renderableGLES2 ? 80 : 0);
+		eglScore.renderableGL = 0;
 #else
-		int renderableScoreGLES = 0;
-		int renderableScoreGL = renderableGL ? 100 : (renderableGLES3 ? 80 : 0);
+		eglScore.renderableGLES = 0;
+		eglScore.renderableGL = renderableGL ? 100 : (renderableGLES3 ? 80 : 0);
 #endif
 
-		if (avoidAlphaGLES && renderableScoreGLES > 0) {
-			alphaScore = 8 - alphaScore;
+		if (avoidAlphaGLES && eglScore.renderableGLES > 0) {
+			eglScore.alpha = 8 - eglScore.alpha;
 		}
 
 		int score = 0;
 		// Here's a good place to play with the weights to pick a better config.
-		score += colorScore * 10 + alphaScore * 2;
-		score += depthScore * 5 + stencilScore;
-		score += levelScore + samplesScore + sampleBufferScore + transparentScore;
-		score += caveatScore + renderableScoreGLES + renderableScoreGL;
+		score += eglScore.color * 10 + eglScore.alpha * 2;
+		score += eglScore.depth * 5 + eglScore.stencil;
+		score += eglScore.level + eglScore.samples + eglScore.sampleBuffer + eglScore.transparent;
+		score += eglScore.caveat + eglScore.renderableGLES + eglScore.renderableGL;
 
 #ifndef USING_FBDEV
-		score += surfaceScore;
+		score += eglScore.surface;
 #endif
 
 		if (score > bestScore) {
@@ -226,10 +228,19 @@ EGLConfig EGL_FindConfig(int *contextVersion) {
 			best = config;
 			bestContextVersion = renderableGLES3 ? 3 : (renderableGLES2 ? 2 : 0);
 		}
+
+		eglScoreTable.push_back(eglScore);
 	}
+
+	if (egl_debug)
+		printEGLConfigScores(eglScoreTable);
 
 	*contextVersion = bestContextVersion;
 	return best;
+}
+
+void printEGLConfigScores(std::vector<EGLScore> &table) {
+
 }
 
 int8_t EGL_Init(SDL_Window *window) {

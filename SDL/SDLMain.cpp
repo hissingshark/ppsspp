@@ -54,6 +54,8 @@ SDLJoystick *joystick = NULL;
 #include "Core/ConfigValues.h"
 #include "Common/GraphicsContext.h"
 #include "SDLGLGraphicsContext.h"
+bool egl_debug;
+
 #include "SDLVulkanGraphicsContext.h"
 
 
@@ -372,6 +374,7 @@ int main(int argc, char *argv[]) {
 	int set_xres = -1;
 	int set_yres = -1;
 	int w = 0, h = 0;
+	egl_debug = false;
 	bool portrait = false;
 	bool set_ipad = false;
 	float set_dpi = 1.0f;
@@ -405,6 +408,8 @@ int main(int argc, char *argv[]) {
 			set_ipad = true;
 		else if (!strcmp(argv[i],"--portrait"))
 			portrait = true;
+		else if (!strcmp(argv[i],"--egldebug"))
+			egl_debug = true;
 		else {
 			remain_argv[remain_argc++] = argv[i];
 		}

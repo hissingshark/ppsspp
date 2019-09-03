@@ -49,3 +49,23 @@ private:
 	SDL_GLContext glContext = nullptr;
 	GLRenderManager *renderManager_ = nullptr;
 };
+
+extern bool egl_debug;
+
+struct EGLScore {
+	int color;
+	int alpha;
+	int depth;
+	int level;
+	int samples;
+	int sampleBuffer;
+	int stencil;
+	int transparent;
+	int caveat;
+	int surface;
+	int renderableGLES;
+	int renderableGL;
+	int total;
+};
+
+void printEGLConfigScores(std::vector<EGLScore> &table);
